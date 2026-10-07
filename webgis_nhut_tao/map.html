@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="description" content="Tra cứu thông tin thửa đất và quy hoạch Xã Nhựt Tảo, Tỉnh Tây Ninh">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://mt1.google.com https://*.basemaps.cartocdn.com; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Cổng Tra cứu Thông Tin Quy Hoạch Xã Nhựt Tảo</title>
+  <link rel="stylesheet" href="lib/ol.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <div id="map" role="application" aria-label="Bản đồ thửa đất"></div>
+
+    <div id="loading" class="loading-overlay">
+      <div class="spinner"></div>
+      <div class="loading-brand">Nhựt Tảo · Tây Ninh</div>
+      <div>Đang tải dữ liệu thửa đất...</div>
+    </div>
+
+    <div id="toast" class="toast" role="status"></div>
+
+    <aside class="sidebar" id="sidebar">
+      <div class="tabs">
+        <button type="button" class="active" data-tab="tothua">Số tờ/thửa</button>
+        <button type="button" data-tab="owner">Chủ sử dụng</button>
+        <button type="button" data-tab="coord">Tọa độ</button>
+      </div>
+
+      <div class="search-box" id="search-tothua">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <input type="text" id="inp-tothua" maxlength="30" autocomplete="off" placeholder="Nhập số tờ_số thửa">
+      </div>
+
+      <div class="search-box" id="search-owner" style="display:none">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <input type="text" id="inp-owner" maxlength="80" autocomplete="off" placeholder="Nhập tên chủ sử dụng">
+      </div>
+      <div id="suggest-owner" class="suggest-list"></div>
+
+      <div class="search-extra" id="search-coord">
+        <input type="text" id="inp-x" inputmode="decimal" maxlength="20" autocomplete="off" placeholder="X (kinh độ)">
+        <input type="text" id="inp-y" inputmode="decimal" maxlength="20" autocomplete="off" placeholder="Y (vĩ độ)">
+      </div>
+      <button type="button" class="btn-search" id="btn-search-go">Tìm kiếm</button>
+
+      <div class="sidebar-body">
+        <div id="empty-state" class="empty-state">
+          <h2>Chưa chọn thửa đất</h2>
+          <p>Nhập thông tin vào ô tìm kiếm hoặc chọn trực tiếp vào một thửa trên bản đồ.</p>
+        </div>
+        <div id="info-content" class="info-content">
+          <h2>Thông tin thửa đất</h2>
+          <div class="info-block" id="block-thua"></div>
+          <div class="info-block" id="block-ratio"></div>
+          <div class="info-block" id="block-qh"></div>
+        </div>
+      </div>
+
+      <div class="sidebar-foot">
+        <button type="button" id="btn-copy" disabled>
+          <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+          Sao chép thông tin
+        </button>
+        <button type="button" id="btn-direction" disabled>
+          <svg viewBox="0 0 24 24"><path d="M21.71 11.29l-9-9a.996.996 0 00-1.41 0l-9 9a.996.996 0 000 1.41l9 9c.39.39 1.02.39 1.41 0l9-9a.996.996 0 000-1.41zM14 14.5V12h-4v3H8v-4c0-.55.45-1 1-1h5V7.5l3.5 3.5-3.5 3.5z"/></svg>
+          Chỉ đường
+        </button>
+      </div>
+    </aside>
+
+    <div class="toolbar">
+      <button type="button" class="tool-btn" id="btn-layers" aria-label="Lớp bản đồ" title="Lớp &amp; nền bản đồ">
+        <svg viewBox="0 0 24 24"><path d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z"/></svg>
+      </button>
+      <button type="button" class="tool-btn" id="btn-locate" aria-label="Định vị GPS" title="Định vị tôi">
+        <svg viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0013 3.06V1h-2v2.06A8.994 8.994 0 003.06 11H1v2h2.06A8.994 8.994 0 0011 20.94V23h2v-2.06A8.994 8.994 0 0020.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
+      </button>
+      <button type="button" class="tool-btn" id="btn-reset" aria-label="Về vị trí mặc định" title="Reset">
+        <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+      </button>
+      <button type="button" class="tool-btn" id="btn-measure-line" data-tool="LineString" aria-label="Đo khoảng cách" title="Đo khoảng cách">
+        <svg viewBox="0 0 24 24"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H3V8h2v4h2V8h2v4h2V8h2v4h2V8h2v4h2V8h2v8z"/></svg>
+      </button>
+      <button type="button" class="tool-btn" id="btn-measure-area" data-tool="Polygon" aria-label="Đo diện tích" title="Đo diện tích">
+        <svg viewBox="0 0 24 24"><path d="M17.63 5.84C17.27 5.33 16.67 5 16 5L5 5.01C3.9 5.01 3 5.9 3 7v10c0 1.1.9 1.99 2 1.99L16 19c.67 0 1.27-.33 1.63-.84L22 12l-4.37-6.16z"/></svg>
+      </button>
+      <button type="button" class="tool-btn" id="btn-measure-clear" aria-label="Xóa đo đạc" title="Xóa đo đạc">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
+
+    <div id="layer-popover" class="layer-popover">
+      <h3>Lớp dữ liệu</h3>
+      <div class="layer-row">
+        <input type="checkbox" id="chk-parcel" checked>
+        <label for="chk-parcel">Thửa đất</label>
+        <input type="range" id="opacity-parcel" min="0" max="100" value="85" aria-label="Độ mờ">
+      </div>
+      <h3 style="margin-top:12px">Nền bản đồ</h3>
+      <div class="basemap-row">
+        <button type="button" class="active" data-base="satellite">Vệ tinh</button>
+        <button type="button" data-base="dark">Tối</button>
+        <button type="button" data-base="light">Sáng</button>
+      </div>
+    </div>
+
+    <div class="zoom-cluster">
+      <button type="button" id="btn-zoom-in" aria-label="Phóng to">+</button>
+      <button type="button" id="btn-zoom-out" aria-label="Thu nhỏ">−</button>
+    </div>
+
+    <a class="logo-badge" href="index.html" title="Về trang giới thiệu">
+      Nhựt Tảo
+      <span>WebGIS</span>
+    </a>
+
+    <div id="measure-result" class="measure-result"></div>
+    <div id="disclaimer" class="disclaimer"></div>
+  </div>
+
+  <script src="lib/ol.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/style_aggregated.js"></script>
+  <script src="data/Aggregated_1.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
